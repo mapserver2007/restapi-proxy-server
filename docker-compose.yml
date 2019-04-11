@@ -1,0 +1,19 @@
+version: '3'
+services:
+  nginx:
+    image: nginx:1.15
+    container_name: restapi-proxy-server
+    hostname: restapi-proxy-server
+    ports:
+      - "3000:3000"
+    environment:
+      - X_AUTH_TOKEN=$X_AUTH_TOKEN
+    networks:
+      - restapi_proxy_server
+    volumes:
+      - ./nginx.conf.tmpl:/etc/nginx/nginx.conf.tmpl
+    command: /bin/sh -c "envsubst '$$X_AUTH_TOKEN' < /etc/nginx/nginx.conf.tmpl > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
+
+networks:
+  restapi_proxy_server:
+    external: true
