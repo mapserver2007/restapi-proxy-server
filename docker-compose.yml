@@ -8,11 +8,13 @@ services:
       - "3000:3000"
     environment:
       - X_AUTH_TOKEN=$X_AUTH_TOKEN
+      - SERVER_HOST=$SERVER_HOST
+      - SERVER_PORT=$SERVER_PORT
     networks:
       - restapi_proxy_server
     volumes:
       - ./nginx.conf.tmpl:/etc/nginx/nginx.conf.tmpl
-    command: /bin/sh -c "envsubst '$$X_AUTH_TOKEN' < /etc/nginx/nginx.conf.tmpl > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
+    command: /bin/sh -c "envsubst '$$SERVER_HOST$$SERVER_PORT$$X_AUTH_TOKEN' < /etc/nginx/nginx.conf.tmpl > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
 
 networks:
   restapi_proxy_server:
