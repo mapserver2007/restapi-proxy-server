@@ -12,11 +12,12 @@ services:
       - SERVER_PORT=$SERVER_PORT
       - NAMESERVER=127.0.0.11
       - CHARSET=UTF-8
+      - PROTOCOL=http
     networks:
       - variable-request-reverse-proxy
     volumes:
       - ./nginx.conf.tmpl:/usr/local/openresty/nginx/conf/nginx.conf.tmpl
-    command: /bin/sh -c "envsubst '$$SERVER_HOST$$SERVER_PORT$$NAMESERVER$$CHARSET' < /usr/local/openresty/nginx/conf/nginx.conf.tmpl > /usr/local/openresty/nginx/conf/nginx.conf && /usr/local/openresty/nginx/sbin/nginx -g 'daemon off;'"
+    command: /bin/sh -c "envsubst '$$SERVER_HOST$$SERVER_PORT$$NAMESERVER$$CHARSET$$PROTOCOL' < /usr/local/openresty/nginx/conf/nginx.conf.tmpl > /usr/local/openresty/nginx/conf/nginx.conf && /usr/local/openresty/nginx/sbin/nginx -g 'daemon off;'"
 
   server-https:
     build: ./
@@ -30,11 +31,12 @@ services:
       - SERVER_PORT=$SERVER_PORT
       - NAMESERVER=127.0.0.11
       - CHARSET=UTF-8
+      - PROTOCOL=https
     networks:
       - variable-request-reverse-proxy
     volumes:
       - ./nginx.conf.tmpl:/usr/local/openresty/nginx/conf/nginx.conf.tmpl
-    command: /bin/sh -c "envsubst '$$SERVER_HOST$$SERVER_PORT$$NAMESERVER$$CHARSET' < /usr/local/openresty/nginx/conf/nginx.conf.tmpl > /usr/local/openresty/nginx/conf/nginx.conf && /usr/local/openresty/nginx/sbin/nginx -g 'daemon off;'"
+    command: /bin/sh -c "envsubst '$$SERVER_HOST$$SERVER_PORT$$NAMESERVER$$CHARSET$$PROTOCOL' < /usr/local/openresty/nginx/conf/nginx.conf.tmpl > /usr/local/openresty/nginx/conf/nginx.conf && /usr/local/openresty/nginx/sbin/nginx -g 'daemon off;'"
 
 networks:
   variable-request-reverse-proxy:

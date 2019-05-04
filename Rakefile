@@ -11,7 +11,7 @@ task :run_and_build do
   cmd = <<-EOS
     docker-compose build
     docker-compose down
-    docker-compose up
+    docker-compose up -d
   EOS
   sh cmd
 end

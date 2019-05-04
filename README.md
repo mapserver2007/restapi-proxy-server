@@ -1,37 +1,18 @@
-# HOP_API_ReverseProxy
-ローカルRESTfulサーバに対するリクエスト時に認証トークンを省略できるリバースプロキシ。
+# variable-request-reverse-proxy
+A reverse proxy that converts GET requests into GET/POST/PUT /DELETE and sends them.
 
-## 使い方
+`http://localhost:3000/{method}/{domain}/{path}`
 
-### .env設定
-.envファイルを開き、対象サーバのホスト、ポートなどを指定。  
-また、認証に使用するトークンのヘッダを指定する(値については各々用意すること)。
-
+## Start reverse proxy server
 ```
-SERVER_HOST=host.docker.internal
-SERVER_PORT=8080
-NGINX_PORT=3000
-X_AUTH_TOKEN=6d2a2af6-491f-4075-b455-39e3660f4ec0
-```
-
-* SERVER_HOST: 開発環境のサーバのホスト名またはIPアドレス。ホストマシンのlocalhostの場合、host.docker.internalを指定する。
-* SERVER_PORT: 開発環境のサーバのポート番号。
-* NGINX_PORT: リバースプロキシサーバのポート番号。
-* X_AUTH_TOKEN: 認証トークン。
-
-### dockerコンテナを起動
-
-```
-$> rake
+$> docker-compose build
+$> docker-compose up -d
+$> docker ps
+CONTAINER ID        IMAGE                                          COMMAND                  CREATED             STATUS              PORTS                    NAMES
+6b528684dc22        mapserver2007/variable-request-reverse-proxy   "/bin/sh -c 'envsubs…"   21 hours ago        Up 16 minutes       0.0.0.0:3000->8080/tcp   http-reverse-proxy-server
+27092abe50cf        mapserver2007/variable-request-reverse-proxy   "/bin/sh -c 'envsubs…"   21 hours ago        Up 16 minutes       0.0.0.0:3001->8080/tcp   https-reverse-proxy-server
 ```
 
-### リバースプロキシ経由で開発サーバへリクエストする
-
-```
-$> curl -X PUT http://localhost:3000/accounts -d 'mail_address=hoge@meleap.com' -i
-```
-リバースプロキシ経由のリクエストは、
-```
-$> curl -X PUT http://localhost:8080/accounts -H 'X-Auth-Token: xxxxxxxxxxxxxxxxxxxxxxxx' -d 'mail_address=hoge@meleap.com' -i
-```
-と同じになる。
+## Access via reverse proxy
+* http://localhost:3000/get/www.example.com/top
+* http://localhost:3001/post/www.example.com/login?id=aaa&password=aaa

@@ -25,6 +25,7 @@ http {
         proxy_set_header    X-Forwarded-Host       $host;
         proxy_set_header    X-Forwarded-Server     $host;
         proxy_set_header    X-Forwarded-For        $proxy_add_x_forwarded_for;
+        proxy_set_header    X-Auth-Token           ${X_AUTH_TOKEN};
 
         proxy_connect_timeout       3600;
         proxy_send_timeout          3600;
@@ -43,12 +44,80 @@ http {
             set $domain $1;
             set $path $2;
             set $url '';
+            set $protocol ${PROTOCOL};
 
             access_by_lua '
-                local protocol = "https"
-                ngx.var.url = protocol .. "://" .. ngx.var.domain .. "/" .. ngx.var.path
+                ngx.var.url = ngx.var.protocol .. "://" .. ngx.var.domain .. "/" .. ngx.var.path
                 local res = ngx.location.capture_multi {
                     {"/reverse_proxy", {method = ngx.HTTP_GET, share_all_vars = true}}
+                }
+                ngx.print(res.body)
+            ';
+        }
+
+        location ~ ^/post/([a-zA-Z0-9.-_]+)/(.+) {
+            more_set_headers    "Content-Type: text/html";
+            more_set_headers    "Content-Encoding: gzip";
+
+            set $domain $1;
+            set $path $2;
+            set $url '';
+            set $protocol ${PROTOCOL};
+
+            access_by_lua '
+                ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded")
+
+                local args, err = ngx.req.get_uri_args()
+                local map = {}
+                for k, v in pairs(args) do
+                    table.insert(map, k.."="..v)
+                end
+                local params = table.concat(map, "&")
+
+                ngx.var.url = ngx.var.protocol .. "://" .. ngx.var.domain .. "/" .. ngx.var.path
+                local res = ngx.location.capture_multi {
+                    {"/reverse_proxy", {method = ngx.HTTP_POST, body = params, share_all_vars = true}}
+                }
+                ngx.print(res.body)
+            ';
+        }
+
+        location ~ ^/put/([a-zA-Z0-9.-_]+)/(.+) {
+            more_set_headers    "Content-Type: text/html";
+            more_set_headers    "Content-Encoding: gzip";
+
+            set $domain $1;
+            set $path $2;
+            set $url '';
+            set $protocol ${PROTOCOL};
+
+            access_by_lua '
+                ngx.req.set_header("Content-Type", "application/json")
+
+                local args, err = ngx.req.get_uri_args()
+                local data = args.data
+
+                ngx.var.url = ngx.var.protocol .. "://" .. ngx.var.domain .. "/" .. ngx.var.path
+                local res = ngx.location.capture_multi {
+                    {"/reverse_proxy", {method = ngx.HTTP_PUT, body = data, share_all_vars = true}}
+                }
+                ngx.print(res.body)
+            ';
+        }
+
+        location ~ ^/delete/([a-zA-Z0-9.-_]+)/(.+) {
+            more_set_headers    "Content-Type: text/html";
+            more_set_headers    "Content-Encoding: gzip";
+
+            set $domain $1;
+            set $path $2;
+            set $url '';
+            set $protocol ${PROTOCOL};
+
+            access_by_lua '
+                ngx.var.url = ngx.var.protocol .. "://" .. ngx.var.domain .. "/" .. ngx.var.path
+                local res = ngx.location.capture_multi {
+                    {"/reverse_proxy", {method = ngx.HTTP_DELETE, share_all_vars = true}}
                 }
                 ngx.print(res.body)
             ';
