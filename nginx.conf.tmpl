@@ -1,32 +1,57 @@
 worker_processes 1;
 
-error_log /var/log/nginx/error.log warn;
-pid       /var/run/nginx.pid;
-
 events {
     worker_connections 1024;
 }
 
 http {
-    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
-                      '$status $body_bytes_sent "$http_referer" '
-                      '"$http_user_agent" "$http_x_forwarded_for"';
-    access_log        /var/log/nginx/access.log  main;
+    upstream proxy {
+        server ${SERVER_HOST}:${SERVER_PORT};
+    }
+
+    types {
+        text/html;
+    }
+
+    resolver ${NAMESERVER};
 
     server {
-        listen  3000;
-        server_name restapi-proxy-server;
+        listen 8080;
+        server_name variable-request-reverse-proxy;
+        charset ${CHARSET};
 
-        proxy_set_header    Host                   $host;
+        proxy_set_header    Host                   $proxy_host;
         proxy_set_header    X-Real-IP              $remote_addr;
         proxy_set_header    X-Forwarded-Host       $host;
         proxy_set_header    X-Forwarded-Server     $host;
         proxy_set_header    X-Forwarded-For        $proxy_add_x_forwarded_for;
 
-        proxy_set_header    X-Auth-Token           ${X_AUTH_TOKEN};
+        proxy_connect_timeout       3600;
+        proxy_send_timeout          3600;
+        proxy_read_timeout          3600;
+        send_timeout                3600;
 
-        location / {
-            proxy_pass      http://${SERVER_HOST}:${SERVER_PORT}/;
+        location /reverse_proxy {
+            internal;
+            proxy_pass $url;
+        }
+
+        location ~ ^/get/([a-zA-Z0-9.-_]+)/(.+) {
+            more_set_headers    "Content-Type: text/html";
+            more_set_headers    "Content-Encoding: gzip";
+
+            set $domain $1;
+            set $path $2;
+            set $url '';
+
+            access_by_lua '
+                local protocol = "https"
+                ngx.var.url = protocol .. "://" .. ngx.var.domain .. "/" .. ngx.var.path
+                local res = ngx.location.capture_multi {
+                    {"/reverse_proxy", {method = ngx.HTTP_GET, share_all_vars = true}}
+                }
+                ngx.print(res.body)
+            ';
         }
     }
 }

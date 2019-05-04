@@ -1,21 +1,41 @@
 version: '3'
 services:
-  nginx:
-    image: nginx:1.15
-    container_name: restapi-proxy-server
-    hostname: restapi-proxy-server
+  server-http:
+    build: ./
+    image: mapserver2007/variable-request-reverse-proxy
+    container_name: http-reverse-proxy-server
+    hostname: reverse-proxy-server
     ports:
-      - "3000:3000"
+      - "3000:8080"
     environment:
-      - X_AUTH_TOKEN=$X_AUTH_TOKEN
       - SERVER_HOST=$SERVER_HOST
       - SERVER_PORT=$SERVER_PORT
+      - NAMESERVER=127.0.0.11
+      - CHARSET=UTF-8
     networks:
-      - restapi_proxy_server
+      - variable-request-reverse-proxy
     volumes:
-      - ./nginx.conf.tmpl:/etc/nginx/nginx.conf.tmpl
-    command: /bin/sh -c "envsubst '$$SERVER_HOST$$SERVER_PORT$$X_AUTH_TOKEN' < /etc/nginx/nginx.conf.tmpl > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
+      - ./nginx.conf.tmpl:/usr/local/openresty/nginx/conf/nginx.conf.tmpl
+    command: /bin/sh -c "envsubst '$$SERVER_HOST$$SERVER_PORT$$NAMESERVER$$CHARSET' < /usr/local/openresty/nginx/conf/nginx.conf.tmpl > /usr/local/openresty/nginx/conf/nginx.conf && /usr/local/openresty/nginx/sbin/nginx -g 'daemon off;'"
+
+  server-https:
+    build: ./
+    image: mapserver2007/variable-request-reverse-proxy
+    container_name: https-reverse-proxy-server
+    hostname: reverse-proxy-server
+    ports:
+      - "3001:8080"
+    environment:
+      - SERVER_HOST=$SERVER_HOST
+      - SERVER_PORT=$SERVER_PORT
+      - NAMESERVER=127.0.0.11
+      - CHARSET=UTF-8
+    networks:
+      - variable-request-reverse-proxy
+    volumes:
+      - ./nginx.conf.tmpl:/usr/local/openresty/nginx/conf/nginx.conf.tmpl
+    command: /bin/sh -c "envsubst '$$SERVER_HOST$$SERVER_PORT$$NAMESERVER$$CHARSET' < /usr/local/openresty/nginx/conf/nginx.conf.tmpl > /usr/local/openresty/nginx/conf/nginx.conf && /usr/local/openresty/nginx/sbin/nginx -g 'daemon off;'"
 
 networks:
-  restapi_proxy_server:
+  variable-request-reverse-proxy:
     external: true
