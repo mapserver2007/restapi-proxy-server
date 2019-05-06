@@ -5,10 +5,6 @@ events {
 }
 
 http {
-    upstream proxy {
-        server ${SERVER_HOST}:${SERVER_PORT};
-    }
-
     types {
         text/html;
     }
@@ -20,7 +16,6 @@ http {
         server_name variable-request-reverse-proxy;
         charset ${CHARSET};
 
-        proxy_set_header    Host                   $proxy_host;
         proxy_set_header    X-Real-IP              $remote_addr;
         proxy_set_header    X-Forwarded-Host       $host;
         proxy_set_header    X-Forwarded-Server     $host;
@@ -37,7 +32,7 @@ http {
             proxy_pass $url;
         }
 
-        location ~ ^/get/([a-zA-Z0-9.-_]+)/(.+) {
+        location ~ ^/get/([a-zA-Z0-9.-_:]+)/(.+) {
             more_set_headers    "Content-Type: text/html";
             more_set_headers    "Content-Encoding: gzip";
 
@@ -51,13 +46,12 @@ http {
                 local res = ngx.location.capture_multi {
                     {"/reverse_proxy", {method = ngx.HTTP_GET, share_all_vars = true}}
                 }
-                ngx.print(res.body)
+                ngx.say(res.body)
             ';
         }
 
-        location ~ ^/post/([a-zA-Z0-9.-_]+)/(.+) {
+        location ~ ^/post/([a-zA-Z0-9.-_:]+)/(.+) {
             more_set_headers    "Content-Type: text/html";
-            more_set_headers    "Content-Encoding: gzip";
 
             set $domain $1;
             set $path $2;
@@ -65,26 +59,32 @@ http {
             set $protocol ${PROTOCOL};
 
             access_by_lua '
-                ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded")
-
                 local args, err = ngx.req.get_uri_args()
-                local map = {}
-                for k, v in pairs(args) do
-                    table.insert(map, k.."="..v)
+                local body = ""
+
+                if not args._body then
+                    more_set_headers "Content-Encoding: gzip";
+                    local map = {}
+                    for k, v in pairs(args) do
+                        table.insert(map, k.."="..v)
+                    end
+                    body = table.concat(map, "&")
+                    ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded")
+                else
+                    body = args._body
+                    ngx.req.set_header("Content-Type", "application/json")
                 end
-                local params = table.concat(map, "&")
 
                 ngx.var.url = ngx.var.protocol .. "://" .. ngx.var.domain .. "/" .. ngx.var.path
                 local res = ngx.location.capture_multi {
-                    {"/reverse_proxy", {method = ngx.HTTP_POST, body = params, share_all_vars = true}}
+                    {"/reverse_proxy", {method = ngx.HTTP_POST, body = body, share_all_vars = true}}
                 }
                 ngx.print(res.body)
             ';
         }
 
-        location ~ ^/put/([a-zA-Z0-9.-_]+)/(.+) {
+        location ~ ^/put/([a-zA-Z0-9.-_:]+)/(.+) {
             more_set_headers    "Content-Type: text/html";
-            more_set_headers    "Content-Encoding: gzip";
 
             set $domain $1;
             set $path $2;
@@ -92,22 +92,32 @@ http {
             set $protocol ${PROTOCOL};
 
             access_by_lua '
-                ngx.req.set_header("Content-Type", "application/json")
-
                 local args, err = ngx.req.get_uri_args()
-                local data = args.data
+                local body = ""
+
+                if not args._body then
+                    more_set_headers "Content-Encoding: gzip";
+                    local map = {}
+                    for k, v in pairs(args) do
+                        table.insert(map, k.."="..v)
+                    end
+                    body = table.concat(map, "&")
+                    ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded")
+                else
+                    body = args._body
+                    ngx.req.set_header("Content-Type", "application/json")
+                end
 
                 ngx.var.url = ngx.var.protocol .. "://" .. ngx.var.domain .. "/" .. ngx.var.path
                 local res = ngx.location.capture_multi {
-                    {"/reverse_proxy", {method = ngx.HTTP_PUT, body = data, share_all_vars = true}}
+                    {"/reverse_proxy", {method = ngx.HTTP_PUT, body = body, share_all_vars = true}}
                 }
                 ngx.print(res.body)
             ';
         }
 
-        location ~ ^/delete/([a-zA-Z0-9.-_]+)/(.+) {
+        location ~ ^/delete/([a-zA-Z0-9.-_:]+)/(.+) {
             more_set_headers    "Content-Type: text/html";
-            more_set_headers    "Content-Encoding: gzip";
 
             set $domain $1;
             set $path $2;
