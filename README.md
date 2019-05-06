@@ -16,3 +16,6 @@ CONTAINER ID        IMAGE                                          COMMAND      
 ## Access via reverse proxy
 * http://localhost:3000/get/www.example.com/top
 * http://localhost:3001/post/www.example.com/login?id=aaa&password=aaa
+    * sending content-type by `application/x-www-form-urlencoded`
+* http://localhost:3001/post/api.example.com/login?_body={"name":"name1"}
+    * sending content-tyoe by `application/json`
