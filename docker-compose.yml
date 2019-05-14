@@ -1,9 +1,9 @@
 version: '3'
 services:
-  server-http:
+  api-http-server:
     build: ./
     image: mapserver2007/variable-request-reverse-proxy
-    container_name: http-reverse-proxy-server
+    container_name: http-api-reverse-proxy-server
     hostname: reverse-proxy-server
     ports:
       - "3000:8080"
@@ -12,16 +12,17 @@ services:
       - NAMESERVER=127.0.0.11
       - CHARSET=UTF-8
       - PROTOCOL=http
+      - CONTENT_TYPE=application/json
     networks:
       - variable-request-reverse-proxy
     volumes:
       - ./nginx.conf.tmpl:/usr/local/openresty/nginx/conf/nginx.conf.tmpl
-    command: /bin/sh -c "envsubst '$$X_AUTH_TOKEN$$NAMESERVER$$CHARSET$$PROTOCOL' < /usr/local/openresty/nginx/conf/nginx.conf.tmpl > /usr/local/openresty/nginx/conf/nginx.conf && /usr/local/openresty/nginx/sbin/nginx -g 'daemon off;'"
+    command: /bin/sh -c "envsubst '$$X_AUTH_TOKEN$$NAMESERVER$$CHARSET$$PROTOCOL$$CONTENT_TYPE' < /usr/local/openresty/nginx/conf/nginx.conf.tmpl > /usr/local/openresty/nginx/conf/nginx.conf && /usr/local/openresty/nginx/sbin/nginx -g 'daemon off;'"
 
-  server-https:
+  api-https-server:
     build: ./
     image: mapserver2007/variable-request-reverse-proxy
-    container_name: https-reverse-proxy-server
+    container_name: https-api-reverse-proxy-server
     hostname: reverse-proxy-server
     ports:
       - "3001:8080"
@@ -30,11 +31,50 @@ services:
       - NAMESERVER=127.0.0.11
       - CHARSET=UTF-8
       - PROTOCOL=https
+      - CONTENT_TYPE=application/json
     networks:
       - variable-request-reverse-proxy
     volumes:
       - ./nginx.conf.tmpl:/usr/local/openresty/nginx/conf/nginx.conf.tmpl
-    command: /bin/sh -c "envsubst '$$X_AUTH_TOKEN$$NAMESERVER$$CHARSET$$PROTOCOL' < /usr/local/openresty/nginx/conf/nginx.conf.tmpl > /usr/local/openresty/nginx/conf/nginx.conf && /usr/local/openresty/nginx/sbin/nginx -g 'daemon off;'"
+    command: /bin/sh -c "envsubst '$$X_AUTH_TOKEN$$NAMESERVER$$CHARSET$$PROTOCOL$$CONTENT_TYPE' < /usr/local/openresty/nginx/conf/nginx.conf.tmpl > /usr/local/openresty/nginx/conf/nginx.conf && /usr/local/openresty/nginx/sbin/nginx -g 'daemon off;'"
+
+  html-http-server:
+    build: ./
+    image: mapserver2007/variable-request-reverse-proxy
+    container_name: http-html-reverse-proxy-server
+    hostname: reverse-proxy-server
+    ports:
+      - "3002:8080"
+    environment:
+      - X_AUTH_TOKEN=$X_AUTH_TOKEN
+      - NAMESERVER=8.8.8.8
+      - CHARSET=UTF-8
+      - PROTOCOL=http
+      - CONTENT_TYPE=text/html
+    networks:
+      - variable-request-reverse-proxy
+    volumes:
+      - ./nginx.conf.tmpl:/usr/local/openresty/nginx/conf/nginx.conf.tmpl
+    command: /bin/sh -c "envsubst '$$X_AUTH_TOKEN$$NAMESERVER$$CHARSET$$PROTOCOL$$CONTENT_TYPE' < /usr/local/openresty/nginx/conf/nginx.conf.tmpl > /usr/local/openresty/nginx/conf/nginx.conf && /usr/local/openresty/nginx/sbin/nginx -g 'daemon off;'"
+
+  html-https-server:
+    build: ./
+    image: mapserver2007/variable-request-reverse-proxy
+    container_name: https-html-reverse-proxy-server
+    hostname: reverse-proxy-server
+    ports:
+      - "3003:8080"
+    environment:
+      - X_AUTH_TOKEN=$X_AUTH_TOKEN
+      - NAMESERVER=8.8.8.8
+      - CHARSET=UTF-8
+      - PROTOCOL=https
+      - CONTENT_TYPE=text/html
+    networks:
+      - variable-request-reverse-proxy
+    volumes:
+      - ./nginx.conf.tmpl:/usr/local/openresty/nginx/conf/nginx.conf.tmpl
+    command: /bin/sh -c "envsubst '$$X_AUTH_TOKEN$$NAMESERVER$$CHARSET$$PROTOCOL$$CONTENT_TYPE' < /usr/local/openresty/nginx/conf/nginx.conf.tmpl > /usr/local/openresty/nginx/conf/nginx.conf && /usr/local/openresty/nginx/sbin/nginx -g 'daemon off;'"
 
 networks:
   variable-request-reverse-proxy:

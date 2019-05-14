@@ -5,10 +5,6 @@ events {
 }
 
 http {
-    types {
-        text/html;
-    }
-
     resolver ${NAMESERVER};
 
     server {
@@ -27,36 +23,44 @@ http {
         proxy_read_timeout          3600;
         send_timeout                3600;
 
-        location /reverse_proxy {
+        location /proxy {
             internal;
             proxy_pass $url;
         }
 
         location ~ ^/get/([a-zA-Z0-9.-_:]+)/(.+) {
-            more_set_headers    "Content-Type: text/html";
-            more_set_headers    "Content-Encoding: gzip";
-
             set $domain $1;
             set $path $2;
             set $url '';
-            set $protocol ${PROTOCOL};
+            set $protocol "${PROTOCOL}";
+            set $proxy_location "${PROXY_LOCATION}";
+            set $response_content_type "${CONTENT_TYPE}";
 
             access_by_lua '
+                ngx.header.content_type = ngx.var.response_content_type
+                if ngx.var.response_content_type == "text/html" then
+                    ngx.header.content_encoding = "gzip"
+                end
+
                 ngx.var.url = ngx.var.protocol .. "://" .. ngx.var.domain .. "/" .. ngx.var.path
                 local res = ngx.location.capture_multi {
-                    {"/reverse_proxy", {method = ngx.HTTP_GET, share_all_vars = true}}
+                    {"/proxy", {method = ngx.HTTP_GET, share_all_vars = true}}
                 }
-                ngx.say(res.body)
+
+                if res.status == 200 then
+                    ngx.say(res.body)
+                else
+                    return ngx.exit(404)
+                end
             ';
         }
 
         location ~ ^/post/([a-zA-Z0-9.-_:]+)/(.+) {
-            more_set_headers    "Content-Type: text/html";
-
             set $domain $1;
             set $path $2;
             set $url '';
-            set $protocol ${PROTOCOL};
+            set $protocol "${PROTOCOL}";
+            set $proxy_location "${PROXY_LOCATION}";
 
             access_by_lua '
                 local args, err = ngx.req.get_uri_args()
@@ -77,19 +81,18 @@ http {
 
                 ngx.var.url = ngx.var.protocol .. "://" .. ngx.var.domain .. "/" .. ngx.var.path
                 local res = ngx.location.capture_multi {
-                    {"/reverse_proxy", {method = ngx.HTTP_POST, body = body, share_all_vars = true}}
+                    {"/proxy", {method = ngx.HTTP_POST, body = body, share_all_vars = true}}
                 }
                 ngx.print(res.body)
             ';
         }
 
         location ~ ^/put/([a-zA-Z0-9.-_:]+)/(.+) {
-            more_set_headers    "Content-Type: text/html";
-
             set $domain $1;
             set $path $2;
             set $url '';
-            set $protocol ${PROTOCOL};
+            set $protocol "${PROTOCOL}";
+            set $proxy_location "${PROXY_LOCATION}";
 
             access_by_lua '
                 local args, err = ngx.req.get_uri_args()
@@ -110,24 +113,23 @@ http {
 
                 ngx.var.url = ngx.var.protocol .. "://" .. ngx.var.domain .. "/" .. ngx.var.path
                 local res = ngx.location.capture_multi {
-                    {"/reverse_proxy", {method = ngx.HTTP_PUT, body = body, share_all_vars = true}}
+                    {"/proxy", {method = ngx.HTTP_PUT, body = body, share_all_vars = true}}
                 }
                 ngx.print(res.body)
             ';
         }
 
         location ~ ^/delete/([a-zA-Z0-9.-_:]+)/(.+) {
-            more_set_headers    "Content-Type: text/html";
-
             set $domain $1;
             set $path $2;
             set $url '';
-            set $protocol ${PROTOCOL};
+            set $protocol "${PROTOCOL}";
+            set $proxy_location "${PROXY_LOCATION}";
 
             access_by_lua '
                 ngx.var.url = ngx.var.protocol .. "://" .. ngx.var.domain .. "/" .. ngx.var.path
                 local res = ngx.location.capture_multi {
-                    {"/reverse_proxy", {method = ngx.HTTP_DELETE, share_all_vars = true}}
+                    {"/proxy", {method = ngx.HTTP_DELETE, share_all_vars = true}}
                 }
                 ngx.print(res.body)
             ';
