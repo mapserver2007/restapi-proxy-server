@@ -5,7 +5,7 @@ events {
 }
 
 http {
-    resolver ${NAMESERVER};
+    resolver ${NAMESERVER} valid=5s;
 
     server {
         listen 8080;
@@ -23,6 +23,8 @@ http {
         proxy_read_timeout          3600;
         send_timeout                3600;
 
+        error_log   /var/log/nginx/error.log   warn;
+
         location /proxy {
             internal;
             proxy_pass $url;
@@ -33,24 +35,30 @@ http {
             set $path $2;
             set $url '';
             set $protocol "${PROTOCOL}";
-            set $proxy_location "${PROXY_LOCATION}";
             set $response_content_type "${CONTENT_TYPE}";
 
             access_by_lua '
                 ngx.header.content_type = ngx.var.response_content_type
-                if ngx.var.response_content_type == "text/html" then
-                    ngx.header.content_encoding = "gzip"
-                end
-
                 ngx.var.url = ngx.var.protocol .. "://" .. ngx.var.domain .. "/" .. ngx.var.path
                 local res = ngx.location.capture_multi {
                     {"/proxy", {method = ngx.HTTP_GET, share_all_vars = true}}
                 }
 
                 if res.status == 200 then
+                    if ngx.var.response_content_type == "text/html" then
+                        ngx.header.content_encoding = "gzip"
+                    end
                     ngx.say(res.body)
+                elseif res.status == 301 or res.status == 302 then
+                    local redirect_url = res.header["Location"]
+                    local domain = ""
+                    local path = ""
+                    domain, path = ngx.re.match(redirect_url, "(.+?):\\\\/\\\\/(.+)", "oj")
+
+                    ngx.say(domain)
+                    ngx.say(path)
                 else
-                    return ngx.exit(404)
+                    ngx.say(ngx.var.url)
                 end
             ';
         }
