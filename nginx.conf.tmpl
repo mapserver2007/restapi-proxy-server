@@ -51,12 +51,12 @@ http {
                     ngx.say(res.body)
                 elseif res.status == 301 or res.status == 302 then
                     local redirect_url = res.header["Location"]
-                    local domain = ""
-                    local path = ""
-                    domain, path = ngx.re.match(redirect_url, "(.+?):\\\\/\\\\/(.+)", "oj")
+                    local r = ngx.re.match(redirect_url, "(http|https):\\\\/\\\\/(.+)", "oj")
+                    local redirect_protocol = r[1]
+                    local redirect_path = r[2]
+                    local redirect_url = "http://localhost:3003/get/" .. redirect_path
 
-                    ngx.say(domain)
-                    ngx.say(path)
+                    return ngx.redirect(redirect_url)
                 else
                     ngx.say(ngx.var.url)
                 end
